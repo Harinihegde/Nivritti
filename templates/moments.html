@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>my moments — samskritam</title>
+<style>
+  body {
+    margin: 0; min-height: 100vh; background: #faf9f7;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 48px 24px; font-family: Arial, Helvetica, sans-serif; box-sizing: border-box;
+  }
+  h1 { font-size: 24px; font-weight: 300; letter-spacing: 0.2em; color: #44403c; margin: 0 0 6px; }
+  .nav { display: flex; justify-content: center; gap: 24px; margin-bottom: 48px; }
+  .nav a { font-size: 12px; color: #a8a29e; letter-spacing: 0.1em; text-decoration: none; }
+  .nav .active { color: #44403c; border-bottom: 0.5px solid #44403c; padding-bottom: 2px; }
+  .box { width: 100%; max-width: 520px; }
+  .moment {
+    background: white; border: 0.5px solid #e7e5e4; border-radius: 16px;
+    padding: 20px 24px; margin-bottom: 16px;
+  }
+  .moment .word { font-size: 16px; letter-spacing: 0.15em; color: #44403c; margin: 0 0 4px; }
+  .moment .meaning { font-size: 12px; color: #a8a29e; font-style: italic; margin: 0 0 10px; }
+  .moment .bridge { font-size: 13px; color: #57534e; line-height: 1.7; margin: 0; }
+  .empty { font-size: 13px; color: #a8a29e; text-align: center; }
+</style>
+</head>
+<body>
+  <h1>samskritam</h1>
+  <div class="nav">
+    <a href="/">explore</a>
+    <span class="active">my moments</span>
+  </div>
+
+  <div class="box" id="momentsBox">
+    <p class="empty">loading...</p>
+  </div>
+
+<script>
+  function getSessionId() {
+    let id = localStorage.getItem('samskritam_session');
+    if (!id) {
+      id = Math.random().toString(36).slice(2);
+      localStorage.setItem('samskritam_session', id);
+    }
+    return id;
+  }
+
+  async function loadMoments() {
+    const sessionId = getSessionId();
+    const box = document.getElementById('momentsBox');
+    const res = await fetch(`/api/moments?sessionId=${sessionId}`);
+    const data = await res.json();
+
+    if (!data.moments || data.moments.length === 0) {
+      box.innerHTML = '<p class="empty">No saved moments yet.</p>';
+      return;
+    }
+
+    box.innerHTML = data.moments.map(m => `
+      <div class="moment">
+        <p class="word">${m.concepts.word} — ${m.concepts.script}</p>
+        <p class="meaning">${m.concepts.meaning}</p>
+        <p class="bridge">${m.ai_bridge_text}</p>
+      </div>
+    `).join('');
+  }
+
+  loadMoments();
+</script>
+</body>
+</html>

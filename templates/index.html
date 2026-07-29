@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>samskritam</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #faf9f7;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    font-family: Arial, Helvetica, sans-serif;
+    box-sizing: border-box;
+  }
+  h1 { font-size: 24px; font-weight: 300; letter-spacing: 0.2em; color: #44403c; margin: 0 0 6px; }
+  .subtitle { font-size: 12px; color: #a8a29e; letter-spacing: 0.12em; margin: 0 0 24px; }
+  .nav { display: flex; justify-content: center; gap: 24px; margin-bottom: 48px; }
+  .nav a { font-size: 12px; color: #a8a29e; letter-spacing: 0.1em; text-decoration: none; }
+  .nav .active { color: #44403c; border-bottom: 0.5px solid #44403c; padding-bottom: 2px; }
+  .box { width: 100%; max-width: 520px; }
+  textarea {
+    width: 100%; background: white; border: 0.5px solid #e7e5e4; border-radius: 16px;
+    padding: 20px 24px; font-size: 14px; color: #57534e; resize: none; min-height: 120px;
+    outline: none; box-sizing: border-box; font-family: inherit; line-height: 1.7;
+  }
+  button {
+    margin-top: 12px; width: 100%; background: #44403c; color: #f5f5f4; border: none;
+    border-radius: 16px; padding: 16px; font-size: 12px; letter-spacing: 0.2em; cursor: pointer;
+  }
+  button:disabled { background: #d6d3d1; cursor: not-allowed; }
+  .error { color: #ef4444; font-size: 13px; text-align: center; margin-top: 12px; }
+  .result-header { text-align: center; margin-bottom: 28px; }
+  .script { font-size: 56px; font-weight: 300; color: #44403c; margin: 0 0 10px; line-height: 1; }
+  .word { font-size: 18px; letter-spacing: 0.25em; color: #78716c; margin: 0 0 6px; }
+  .meaning { font-size: 13px; color: #a8a29e; font-style: italic; margin: 0; }
+  .divider { width: 40px; height: 0.5px; background: #d6d3d1; margin: 0 auto 28px; }
+  .bridge { font-size: 15px; color: #57534e; line-height: 1.8; text-align: center; margin-bottom: 28px; }
+  .tradition {
+    background: white; border: 0.5px solid #e7e5e4; border-radius: 16px;
+    padding: 20px 24px; margin-bottom: 24px;
+  }
+  .tradition-label { font-size: 10px; color: #a8a29e; letter-spacing: 0.15em; text-transform: uppercase; margin: 0 0 10px; }
+  .tradition-text { font-size: 13px; color: #78716c; line-height: 1.7; margin: 0; }
+  .save-btn {
+    width: 100%; background: white; border: 0.5px solid #d6d3d1; border-radius: 16px;
+    padding: 16px; font-size: 12px; letter-spacing: 0.15em; color: #78716c; cursor: pointer; margin-bottom: 12px;
+  }
+  .reset-link { font-size: 12px; color: #a8a29e; letter-spacing: 0.1em; text-align: center; cursor: pointer; margin: 0; }
+</style>
+</head>
+<body>
+
+  <h1>samskritam</h1>
+  <p class="subtitle">ancient words for modern moments</p>
+  <div class="nav">
+    <span class="active">explore</span>
+    <a href="/moments">my moments</a>
+  </div>
+
+  <div class="box" id="inputBox">
+    <p style="font-size:13px;color:#a8a29e;text-align:center;margin-bottom:16px;">
+      Share a thought, a feeling, or a moment
+    </p>
+    <textarea id="userInput" placeholder=""></textarea>
+    <button id="exploreBtn">explore</button>
+    <p class="error" id="errorMsg" style="display:none;"></p>
+  </div>
+
+  <div class="box" id="resultBox" style="display:none;">
+    <div class="result-header">
+      <p class="script" id="resScript"></p>
+      <p class="word" id="resWord"></p>
+      <p class="meaning" id="resMeaning"></p>
+    </div>
+    <div class="divider"></div>
+    <p class="bridge" id="resBridge"></p>
+    <div class="tradition">
+      <p class="tradition-label">from the tradition</p>
+      <p class="tradition-text" id="resEncounter"></p>
+    </div>
+    <button class="save-btn" id="saveBtn">save this moment</button>
+    <p class="reset-link" id="resetLink">explore another moment →</p>
+  </div>
+
+<script>
+  // get or create a sessionId, stored in this browser only
+  function getSessionId() {
+    let id = localStorage.getItem('samskritam_session');
+    if (!id) {
+      id = Math.random().toString(36).slice(2);
+      localStorage.setItem('samskritam_session', id);
+    }
+    return id;
+  }
+  const sessionId = getSessionId();
+  let currentExplorationId = null;
+
+  const inputBox = document.getElementById('inputBox');
+  const resultBox = document.getElementById('resultBox');
+  const userInput = document.getElementById('userInput');
+  const exploreBtn = document.getElementById('exploreBtn');
+  const errorMsg = document.getElementById('errorMsg');
+  const saveBtn = document.getElementById('saveBtn');
+
+  async function explore() {
+    const text = userInput.value.trim();
+    if (!text) return;
+
+    exploreBtn.disabled = true;
+    exploreBtn.textContent = 'discovering...';
+    errorMsg.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/explore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userInput: text, sessionId: sessionId })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      currentExplorationId = data.explorationId;
+      document.getElementById('resScript').textContent = data.concept.script;
+      document.getElementById('resWord').textContent = data.concept.word;
+      document.getElementById('resMeaning').textContent = data.concept.meaning;
+      document.getElementById('resBridge').textContent = data.bridgeText;
+      document.getElementById('resEncounter').textContent = data.concept.encounter;
+
+      saveBtn.textContent = 'save this moment';
+      saveBtn.disabled = false;
+      inputBox.style.display = 'none';
+      resultBox.style.display = 'block';
+    } catch (e) {
+      errorMsg.textContent = e.message || 'Something went wrong. Please try again.';
+      errorMsg.style.display = 'block';
+    } finally {
+      exploreBtn.disabled = false;
+      exploreBtn.textContent = 'explore';
+    }
+  }
+
+  async function saveMoment() {
+    if (!currentExplorationId) return;
+    await fetch('/api/explore', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ explorationId: currentExplorationId })
+    });
+    saveBtn.textContent = 'moment saved';
+    saveBtn.disabled = true;
+  }
+
+  function resetView() {
+    userInput.value = '';
+    errorMsg.style.display = 'none';
+    resultBox.style.display = 'none';
+    inputBox.style.display = 'block';
+  }
+
+  exploreBtn.addEventListener('click', explore);
+  saveBtn.addEventListener('click', saveMoment);
+  document.getElementById('resetLink').addEventListener('click', resetView);
+  userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      explore();
+    }
+  });
+</script>
+</body>
+</html>
