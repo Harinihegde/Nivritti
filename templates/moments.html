@@ -42,10 +42,10 @@
 
 <script>
   function getSessionId() {
-    let id = localStorage.getItem('samskritam_session');
+    let id = localStorage.getItem('nivritti_session');
     if (!id) {
       id = Math.random().toString(36).slice(2);
-      localStorage.setItem('samskritam_session', id);
+      localStorage.setItem('nivritti_session', id);
     }
     return id;
   }
